@@ -1,4 +1,3 @@
-var fs = require('fs');
 var Docxtemplater = require('docxtemplater');
 var JSZip = require('jszip');
 
@@ -114,7 +113,9 @@ exports.Document = function() {
 				  </w:p>';
 				  
 		this._builder.push(pb);
-	}
+    }
+
+  this.insertPageBreak();
 	
 	this.beginTable = function(options){
 		
@@ -279,13 +280,13 @@ exports.Document = function() {
 			
 			if(!newId)
 			{
-				var hrtime = process.hrtime();
+				var hrtime = this.hrtime();
 				var rand = hrtime[0] + "" + hrtime[1];
 				newId = id + "_" + rand;
 				newTarget = target.split('/');
 				newTarget[newTarget.length-1] = rand + "_" + newTarget[newTarget.length-1]; 
 				newTarget = newTarget.join('/');
-			}
+            }
 
 			this.rels.push({ 
 				id: id, 
@@ -309,28 +310,16 @@ exports.Document = function() {
 		return xml;
 	}
 	
-	this.insertDocxSync = function(path){
+	this.insertDocxSync = function(file){
 		
-		var xml = this.getExternalDocxRawXml(fs.readFileSync(path,"binary"));
+      var xml = this.getExternalDocxRawXml(file);
+      console.log(xml);
 		this.insertRaw(xml);
 	}
 	
-	this.insertDocx = function(path, callback){
-		
-		fs.readFile(path, "binary", (e, data) => {
-		  if (e) callback(e);
-		  else
-		  {
-			var xml = this.getExternalDocxRawXml(data);
-			this.insertRaw(xml);
-			callback(null);
-		  }
-		});
-	}
 	
-	this.save = function(filepath, err){
+	this.save = function(template, err){
 		
-		var template = fs.readFileSync(__dirname + "/template.docx","binary");
 		var zip = new JSZip(template);
 		var filesToSave = {};
 		
@@ -346,7 +335,7 @@ exports.Document = function() {
 				if(rel.target != rel.newTarget)
 				{
 					zip.file(saveTo, rel.data);
-					relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
+                  // relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
 				}
 				else if(rel.filename.endsWith(".xml")) 
 				{
@@ -384,13 +373,52 @@ exports.Document = function() {
 				zip.file(path, filesToSave[path]);
 			}
 		}
-		
+
+      var addBody = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
+
+      var body = `<w:p w:rsidR="005F670F" w:rsidRDefault="005F79F5"><w:r><w:t>{@body}</w:t></w:r></w:p>`;
+
+      String.prototype.splice = function (idx, rem, str) {
+        return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
+      };
+
+      var newBody = addBody.splice(addBody.indexOf(`</w:body>`), 0, body);
+
+      zip.file("word/document.xml", newBody);
+
 		var doc = new Docxtemplater().loadZip(zip);
 
 		doc.setData({body: this._body.join(''), header: this._header.join(''), footer: this._footer.join('') });
 		doc.render();
 		
-		var buf = doc.getZip().generate({type:"nodebuffer"});
-		fs.writeFile(filepath,buf, err);
-	}
+      var out = doc.getZip().generate({
+        type: "blob",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      });
+      return out;
+    }
+
+  var performance = global.performance || {}
+  var performanceNow =
+    performance.now ||
+    performance.mozNow ||
+    performance.msNow ||
+    performance.oNow ||
+    performance.webkitNow ||
+    function () { return (new Date()).getTime() }
+
+  this.hrtime = function(previousTimestamp) {
+    var clocktime = performanceNow.call(performance) * 1e-3
+    var seconds = Math.floor(clocktime)
+    var nanoseconds = Math.floor((clocktime % 1) * 1e9)
+    if (previousTimestamp) {
+      seconds = seconds - previousTimestamp[0]
+      nanoseconds = nanoseconds - previousTimestamp[1]
+      if (nanoseconds < 0) {
+        seconds--
+        nanoseconds += 1e9
+      }
+    }
+    return [seconds, nanoseconds]
+  }
 }
