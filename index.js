@@ -249,62 +249,69 @@ exports.Document = function() {
 	
 	this.rels = [];
 	
-	this.getExternalDocxRawXml = function(docxData)
-	{
-		var zip = new JSZip(docxData);
-	    
-		var xml = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
-		xml = xml.substring(xml.indexOf("<w:body>") + 8);
-        xml = xml.substring(0, xml.indexOf("</w:body>"));
-		
-		var relsXml = this._utf8ArrayToString(zip.file("word/_rels/document.xml.rels")._data.getContent());
-	    var replacements = null;
-		
-		while(relsXml.indexOf("<Relationship") != -1)
-		{
-			relsXml = relsXml.substring(relsXml.indexOf("<Relationship") + 13);
-			relsXml = relsXml.substring(relsXml.indexOf("Id=\"") + 4);
-			var id = relsXml.substring(0, relsXml.indexOf("\""));
-			relsXml = relsXml.substring(relsXml.indexOf("Type=\"") + 6);
-			var type = relsXml.substring(0, relsXml.indexOf("\""));
-			relsXml = relsXml.substring(relsXml.indexOf("Target=\"") + 8);
-			var target = relsXml.substring(0, relsXml.indexOf("\""));
-			
-			var filename = target.indexOf("/") != -1 ? target.substring(target.lastIndexOf("/")+1) : target;
-			var zipPath = target.startsWith("../") ? target.substring(3) : ("word/" + target);
+  this.getExternalDocxRawXml = function (docxData) {
+    console.log("this comes before", docxData);
+    try {
+      var zip = new JSZip(docxData);
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+    
+
+    var xml = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
+    xml = xml.substring(xml.indexOf("<w:body>") + 8);
+    xml = xml.substring(0, xml.indexOf("</w:body>"));
+
+    var relsXml = this._utf8ArrayToString(zip.file("word/_rels/document.xml.rels")._data.getContent());
+    var replacements = null;
+
+    while (relsXml.indexOf("<Relationship") != -1) {
+      relsXml = relsXml.substring(relsXml.indexOf("<Relationship") + 13);
+      relsXml = relsXml.substring(relsXml.indexOf("Id=\"") + 4);
+      var id = relsXml.substring(0, relsXml.indexOf("\""));
+      relsXml = relsXml.substring(relsXml.indexOf("Type=\"") + 6);
+      var type = relsXml.substring(0, relsXml.indexOf("\""));
+      relsXml = relsXml.substring(relsXml.indexOf("Target=\"") + 8);
+      var target = relsXml.substring(0, relsXml.indexOf("\""));
+
+      var filename = target.indexOf("/") != -1 ? target.substring(target.lastIndexOf("/") + 1) : target;
+      var zipPath = target.startsWith("../") ? target.substring(3) : ("word/" + target);
 
 
-			var newId = systemXmlRelIds[filename];
-			var newTarget = target;
-			
-			if(!newId)
-			{
-				var hrtime = this.hrtime();
-				var rand = hrtime[0] + "" + hrtime[1];
-				newId = id + "_" + rand;
-				newTarget = target.split('/');
-				newTarget[newTarget.length-1] = rand + "_" + newTarget[newTarget.length-1]; 
-				newTarget = newTarget.join('/');
-            }
+      var newId = systemXmlRelIds[filename];
+      var newTarget = target;
 
-			this.rels.push({ 
-				id: id, 
-				newId: newId,
-				data: zip.file(zipPath)._data.getContent(), 
-				zipPath: zipPath,
-				filename: filename,
-				type: type, 
-				target: target, 
-				newTarget: newTarget
-			}); 
-			
-			replacements = replacements || {};
-			replacements[id] = newId;
-		}
-	
-		
-		if(replacements)
-			xml = this._replaceRIds(xml, replacements);
+      if (zip.file(zipPath) && zip.file(zipPath)._data != null) {
+      if (!newId) {
+        var hrtime = this.hrtime();
+        var rand = hrtime[0] + "" + hrtime[1];
+        newId = id + "_" + rand;
+        newTarget = target.split('/');
+        newTarget[newTarget.length - 1] = rand + "_" + newTarget[newTarget.length - 1];
+        newTarget = newTarget.join('/');
+      }
+
+      this.rels.push({
+        id: id,
+        newId: newId,
+        data: zip.file(zipPath)._data.getContent(),
+        zipPath: zipPath,
+        filename: filename,
+        type: type,
+        target: target,
+        newTarget: newTarget
+      });
+
+
+      replacements = replacements || {};
+      replacements[id] = newId;
+    }
+
+
+    if (replacements)
+      xml = this._replaceRIds(xml, replacements);
+  }
 		
 		return xml;
 	}
@@ -312,7 +319,6 @@ exports.Document = function() {
 	this.insertDocxSync = function(file){
 		
       var xml = this.getExternalDocxRawXml(file);
-      console.log(xml);
 		this.insertRaw(xml);
 	}
 	
