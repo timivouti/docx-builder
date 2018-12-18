@@ -275,6 +275,7 @@ exports.Document = function() {
 			var filename = target.indexOf("/") != -1 ? target.substring(target.lastIndexOf("/")+1) : target;
 			var zipPath = target.startsWith("../") ? target.substring(3) : ("word/" + target);
 
+
 			var newId = systemXmlRelIds[filename];
 			var newTarget = target;
 			
@@ -321,7 +322,8 @@ exports.Document = function() {
 	this.save = function(template, err){
 		
 		var zip = new JSZip(template);
-		var filesToSave = {};
+      var filesToSave = {};
+      console.log(this.rels.sort((a, b) => a.newId.substring(3, a.newId.length) - b.newId.substring(3, b.newId.length)));
 		
 		if(this.rels.length > 0)
 		{
@@ -334,8 +336,12 @@ exports.Document = function() {
 				
 				if(rel.target != rel.newTarget)
 				{
-					zip.file(saveTo, rel.data);
-                  // relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
+                  var filetypes = [".gif", ".png", ".jpeg", ".pdf"];
+                  if (filetypes.some(x => rel.newTarget.includes(x))) {
+                    zip.file(saveTo, rel.data);
+                    relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
+                  }
+                    
 				}
 				else if(rel.filename.endsWith(".xml")) 
 				{
@@ -387,6 +393,7 @@ exports.Document = function() {
       zip.file("word/document.xml", newBody);
 
 		var doc = new Docxtemplater().loadZip(zip);
+
 
 		doc.setData({body: this._body.join(''), header: this._header.join(''), footer: this._footer.join('') });
 		doc.render();
