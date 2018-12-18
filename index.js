@@ -115,8 +115,6 @@ exports.Document = function() {
 		this._builder.push(pb);
     }
 
-  this.insertPageBreak();
-	
 	this.beginTable = function(options){
 		
 		if(!options)
