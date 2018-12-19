@@ -346,28 +346,59 @@ exports.Document = function() {
                     relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
                   }
                     
-				}
+                }
+                /*else if (rel.filename.endsWith(".xml") && rel.filename === "styles.xml") {
+                  var zipFile = zip.file(rel.zipPath);
+
+                  String.prototype.replaceAll = function (search, replacement) {
+                    var target = this;
+                    return target.replace(new RegExp(search, 'g'), replacement);
+                  };
+
+                  var xml = this._utf8ArrayToString(rel.data).replaceAll(" />", "/>").substring(1);
+                  xml = xml.substring(xml.indexOf("<"));
+                  xml = xml.substring(xml.indexOf(">") + 1);
+
+                  var closingTag = xml.substring(xml.lastIndexOf("</"));
+
+                  var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
+                  mergedXml = mergedXml.replace(closingTag, xml);
+                  console.log(rel.filename, mergedXml);
+                  filesToSave[saveTo] = mergedXml;
+
+                } */
 				else if(rel.filename.endsWith(".xml")) 
 				{
-					var zipFile = zip.file(rel.zipPath);
+                  var zipFile = zip.file(rel.zipPath);
+                  String.prototype.replaceAll = function (search, replacement) {
+                    var target = this;
+                    return target.replace(new RegExp(search, 'g'), replacement);
+                  };
 					
 					if((filesToSave[saveTo] || zipFile) && !rel.target.startsWith('theme/'))
 					{
-						var xml = this._utf8ArrayToString(rel.data).substring(1);
+            var xml = rel.filename === "styles.xml" ? this._utf8ArrayToString(rel.data).replaceAll(" />", "/>").substring(1) : this._utf8ArrayToString(rel.data).substring(1);
 						xml = xml.substring(xml.indexOf("<"));
-						xml = xml.substring(xml.indexOf(">") + 1);
+                      xml = xml.substring(xml.indexOf(">") + 1);
+
+                      if (rel.filename === "styles.xml" && xml.indexOf("<w:styles") > -1) {
+                        xml = xml.substring(xml.indexOf(">") + 1)
+                      }
 						
 						var closingTag = xml.substring(xml.lastIndexOf("</"));
 						
 						var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
-						mergedXml = mergedXml.replace(closingTag, xml);
+                      mergedXml = mergedXml.replace(closingTag, xml);
+                      if (rel.filename === "styles.xml") {
+                        console.log(mergedXml);
+                      }
 						filesToSave[saveTo] = mergedXml;
 					}
 					else
 						filesToSave[saveTo] = this._utf8ArrayToString(rel.data);
 				}
 				else
-					console.log("Cannot merge file " + filename);
+					console.log("Cannot merge file " + rel.filename);
 			}
 			
 			if(relsXmlBuilder.length > 0)
