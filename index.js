@@ -1,5 +1,6 @@
 var Docxtemplater = require('docxtemplater');
 var JSZip = require('jszip');
+var convert = require('xml-js');
 
 var systemXmlRelIds = 
 {	
@@ -376,24 +377,38 @@ exports.Document = function() {
 					
 					if((filesToSave[saveTo] || zipFile) && !rel.target.startsWith('theme/'))
 					{
-            var xml = this._utf8ArrayToString(rel.data).substring(1);
-						xml = xml.substring(xml.indexOf("<"));
-                      xml = xml.substring(xml.indexOf(">") + 1);
+      //      var xml = this._utf8ArrayToString(rel.data).substring(1);
+						//xml = xml.substring(xml.indexOf("<"));
+      //                xml = xml.substring(xml.indexOf(">") + 1);
 
-                      if (rel.filename === "styles.xml" && xml.indexOf("<w:styles") > -1) {
-                        xml = xml.substring(xml.indexOf(">") + 1);
-                      }
+      //                if (rel.filename === "styles.xml" && xml.indexOf("<w:styles") > -1) {
+      //                  xml = xml.substring(xml.indexOf(">") + 1);
+      //                }
 
-                      if (rel.filename === "styles.xml") {
-                        console.log(this._utf8ArrayToString(rel.data));
-                      }
+      //                if (rel.filename === "styles.xml") {
+      //                  console.log(this._utf8ArrayToString(rel.data));
+      //                }
 						
-						var closingTag = xml.substring(xml.lastIndexOf("</"));
+						//var closingTag = xml.substring(xml.lastIndexOf("</"));
 						
-						var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
-                      mergedXml = mergedXml.replace(closingTag, xml);
+						//var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
+      //                mergedXml = mergedXml.replace(closingTag, xml);
    
-						filesToSave[saveTo] = mergedXml;
+						//filesToSave[saveTo] = mergedXml;
+
+                      var xml = convert.xml2json(this._utf8ArrayToString(rel.data), { compact: true, spaces: 0 });
+                      var xmlOriginal = convert.xml2json(
+                        filesToSave[saveTo] ||
+                        this._utf8ArrayToString(zipFile._data.getContent()),
+                        {
+                          compact: true, spaces: 0
+                        });
+
+                      var mergedXml = Object.assign({}, JSON.parse(xml), JSON.parse(xmlOriginal));
+
+                      var mergedRes = convert.json2xml(mergedXml, { compact: true, spaces: 0 });
+
+                      filesToSave[saveTo] = mergedRes;
 					}
 					else
 						filesToSave[saveTo] = this._utf8ArrayToString(rel.data);
