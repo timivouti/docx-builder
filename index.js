@@ -336,7 +336,6 @@ exports.Document = function() {
 			{
 				var rel = this.rels[i];
               var saveTo = rel.newTarget.startsWith("../") ? rel.newTarget.substring(3) : ("word/" + rel.newTarget);
-              console.log(this.rels);
 				
 				if(rel.target != rel.newTarget)
 				{
