@@ -346,26 +346,6 @@ exports.Document = function() {
                   }
                     
                 }
-                /*else if (rel.filename.endsWith(".xml") && rel.filename === "styles.xml") {
-                  var zipFile = zip.file(rel.zipPath);
-
-                  String.prototype.replaceAll = function (search, replacement) {
-                    var target = this;
-                    return target.replace(new RegExp(search, 'g'), replacement);
-                  };
-
-                  var xml = this._utf8ArrayToString(rel.data).replaceAll(" />", "/>").substring(1);
-                  xml = xml.substring(xml.indexOf("<"));
-                  xml = xml.substring(xml.indexOf(">") + 1);
-
-                  var closingTag = xml.substring(xml.lastIndexOf("</"));
-
-                  var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
-                  mergedXml = mergedXml.replace(closingTag, xml);
-                  console.log(rel.filename, mergedXml);
-                  filesToSave[saveTo] = mergedXml;
-
-                } */
 				else if(rel.filename.endsWith(".xml")) 
 				{
                   var zipFile = zip.file(rel.zipPath);
@@ -376,25 +356,6 @@ exports.Document = function() {
 					
 					if((filesToSave[saveTo] || zipFile) && !rel.target.startsWith('theme/'))
 					{
-      //      var xml = this._utf8ArrayToString(rel.data).substring(1);
-						//xml = xml.substring(xml.indexOf("<"));
-      //                xml = xml.substring(xml.indexOf(">") + 1);
-
-      //                if (rel.filename === "styles.xml" && xml.indexOf("<w:styles") > -1) {
-      //                  xml = xml.substring(xml.indexOf(">") + 1);
-      //                }
-
-      //                if (rel.filename === "styles.xml") {
-      //                  console.log(this._utf8ArrayToString(rel.data));
-      //                }
-						
-						//var closingTag = xml.substring(xml.lastIndexOf("</"));
-						
-						//var mergedXml = filesToSave[saveTo] || this._utf8ArrayToString(zipFile._data.getContent());
-      //                mergedXml = mergedXml.replace(closingTag, xml);
-   
-						//filesToSave[saveTo] = mergedXml;
-
                       var xml = convert.xml2json(this._utf8ArrayToString(rel.data), { compact: true, spaces: 0 });
                       var xmlOriginal = convert.xml2json(
                         filesToSave[saveTo] ||
