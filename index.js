@@ -26,7 +26,8 @@ exports.Document = function() {
 	this._underline = false;
 	this._font = null;
 	this._size = null;
-	this._alignment = null;
+  this._alignment = null;
+  this._schemas = {};
 	
 	
 	this.beginHeader = function() 
@@ -155,7 +156,6 @@ exports.Document = function() {
 	}
 	
     this.insertText = function(text) {
-		
 		var p = '<w:p>' +
 		
 			(this._alignment ? ('<w:pPr><w:jc w:val="' + this._alignment + '"/></w:pPr>') : '') +
@@ -260,6 +260,8 @@ exports.Document = function() {
     
 
     var xml = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
+    var schemas = JSON.parse(convert.xml2json(xml, { compact: true, spaces: 0 }));
+    this._schemas = Object.assign({}, this._schemas, schemas["w:document"]["_attributes"]);
     xml = xml.substring(xml.indexOf("<w:body>") + 8);
     xml = xml.substring(0, xml.indexOf("</w:body>"));
 
@@ -323,98 +325,116 @@ exports.Document = function() {
 	}
 	
 	
-	this.save = function(template, isDraft){
-		
-		var zip = new JSZip(template);
-      var filesToSave = {};
+  this.save = function (template, isDraft) {
+    console.log(this._schemas, this.rels);
 
-    if (this.rels.length > 0)
-		{
-			var relsXmlBuilder = [];
-			
-			for(var i=0; i < this.rels.length; i++)
-			{
-				var rel = this.rels[i];
-              var saveTo = rel.newTarget.startsWith("../") ? rel.newTarget.substring(3) : ("word/" + rel.newTarget);
-				
-				if(rel.target != rel.newTarget)
-				{
-                  var filetypes = [".gif", ".png", ".jpeg", ".pdf"];
-                  if (filetypes.some(x => rel.newTarget.includes(x))) {
-                    zip.file(saveTo, rel.data);
-                    relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
-                  }
-                    
-                }
-				else if(rel.filename.endsWith(".xml")) 
-				{
-                  var zipFile = zip.file(rel.zipPath);
-                  String.prototype.replaceAll = function (search, replacement) {
-                    var target = this;
-                    return target.replace(new RegExp(search, 'g'), replacement);
-                  };
-					
-					if((filesToSave[saveTo] || zipFile) && !rel.target.startsWith('theme/'))
-					{
-                      var xml = convert.xml2json(this._utf8ArrayToString(rel.data), { compact: true, spaces: 0 });
-                      var xmlOriginal = convert.xml2json(
-                        filesToSave[saveTo] ||
-                        this._utf8ArrayToString(zipFile._data.getContent()),
-                        {
-                          compact: true, spaces: 0
-                        });
+    var zip = new JSZip(template);
+    var filesToSave = {};
 
-                      var mergedXml = Object.assign({}, JSON.parse(xml), JSON.parse(xmlOriginal));
+    if (this.rels.length > 0) {
+      var relsXmlBuilder = [];
 
-                      var mergedRes = convert.json2xml(mergedXml, { compact: true, spaces: 0 });
+      for (var i = 0; i < this.rels.length; i++) {
+        var rel = this.rels[i];
+        var saveTo = rel.newTarget.startsWith("../") ? rel.newTarget.substring(3) : ("word/" + rel.newTarget);
 
-                      filesToSave[saveTo] = mergedRes;
-					}
-					else
-						filesToSave[saveTo] = this._utf8ArrayToString(rel.data);
-				}
-				else
-					console.log("Cannot merge file " + rel.filename);
-			}
-			
-			if(relsXmlBuilder.length > 0)
-			{
-				var relsXml = this._utf8ArrayToString(zip.file("word/_rels/document.xml.rels")._data.getContent());
-				relsXmlBuilder.push('</Relationships>');
-              relsXml = relsXml.replace('</Relationships>', relsXmlBuilder.join(''));
-				zip.file("word/_rels/document.xml.rels", relsXml);
-			}
-			
-			for(var path in filesToSave)
-			{
-				zip.file(path, filesToSave[path]);
-			}
-		}
+        if (rel.target != rel.newTarget) {
+          //var filetypes = [".gif", ".png", ".jpeg", ".pdf", ".emf"];
+          //if (filetypes.some(x => rel.newTarget.includes(x))) {
+            zip.file(saveTo, rel.data);
+            relsXmlBuilder.push('<Relationship Id="' + rel.newId + '" Type="' + rel.type + '" Target="' + rel.newTarget + '"/>');
+          //}
 
-      var addBody = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
-      var watermark = `<w:sdt><w:sdtPr><w:id w:val="-1960019101"/><w:docPartObj><w:docPartGallery w:val="Watermarks"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent><w:r><w:pict w14:anchorId="59CEE41C"><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="PowerPlusWaterMarkObject357831064" o:spid="_x0000_s2049" type="#_x0000_t136" style="position:absolute;left:0;text-align:left;margin-left:0;margin-top:0;width:412.4pt;height:247.45pt;rotation:315;z-index:-251656704;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" o:allowincell="f" fillcolor="silver" stroked="f"><v:fill opacity=".5"/><v:textpath style="font-family:&quot;calibri&quot;;font-size:1pt" string="LUONNOS"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r></w:sdtContent></w:sdt>`;
-      var body = "";
+        }
+        else if (rel.filename.endsWith(".xml")) {
+          var zipFile = zip.file(rel.zipPath);
+          String.prototype.replaceAll = function (search, replacement) {
+            var target = this;
+            return target.replace(new RegExp(search, 'g'), replacement);
+          };
 
-      String.prototype.splice = function (idx, rem, str) {
-        return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
-      };
+          if ((filesToSave[saveTo] || zipFile) && !rel.target.startsWith('theme/')) {
+            var xml = convert.xml2json(this._utf8ArrayToString(rel.data), { compact: true, spaces: 0 });
+            var xmlOriginal = convert.xml2json(
+              filesToSave[saveTo] ||
+              this._utf8ArrayToString(zipFile._data.getContent()),
+              {
+                compact: true, spaces: 0
+              });
 
-      if (isDraft && zip.file("word/header3.xml") != null) {
-        var addHeader = this._utf8ArrayToString(zip.file("word/header3.xml")._data.getContent());
-         var newHeader = addHeader.splice(addHeader.indexOf(`</w:pPr>`) + 8, 0, watermark);
-        zip.file("word/header3.xml", newHeader);
+            var mergedXml = Object.assign({}, JSON.parse(xml), JSON.parse(xmlOriginal));
+
+            var mergedRes = convert.json2xml(mergedXml, { compact: true, spaces: 0 });
+
+            filesToSave[saveTo] = mergedRes;
+          }
+          else
+            filesToSave[saveTo] = this._utf8ArrayToString(rel.data);
+        }
+        else
+          console.log("Cannot merge file " + rel.filename);
       }
 
-      body += `<w:p w:rsidR="005F670F" w:rsidRDefault="005F79F5"><w:r><w:t>{@body}</w:t></w:r></w:p>`;
+      if (relsXmlBuilder.length > 0) {
+        var relsXml = this._utf8ArrayToString(zip.file("word/_rels/document.xml.rels")._data.getContent());
+        relsXmlBuilder.push('</Relationships>');
+        relsXml = relsXml.replace('</Relationships>', relsXmlBuilder.join(''));
+        zip.file("word/_rels/document.xml.rels", relsXml);
+      }
 
-      var newBody = addBody.splice(addBody.indexOf(`</w:body>`), 0, body);
+      for (var path in filesToSave) {
+        zip.file(path, filesToSave[path]);
+      }
+    }
+
+    var addBody = this._utf8ArrayToString(zip.file("word/document.xml")._data.getContent());
+    var watermark = `<w:sdt><w:sdtPr><w:id w:val="-1960019101"/><w:docPartObj><w:docPartGallery w:val="Watermarks"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent><w:r><w:pict w14:anchorId="59CEE41C"><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="PowerPlusWaterMarkObject357831064" o:spid="_x0000_s2049" type="#_x0000_t136" style="position:absolute;left:0;text-align:left;margin-left:0;margin-top:0;width:412.4pt;height:247.45pt;rotation:315;z-index:-251656704;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" o:allowincell="f" fillcolor="silver" stroked="f"><v:fill opacity=".5"/><v:textpath style="font-family:&quot;calibri&quot;;font-size:1pt" string="LUONNOS"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r></w:sdtContent></w:sdt>`;
+
+    String.prototype.splice = function (idx, rem, str) {
+      return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
+    };
+
+    if (isDraft && zip.file("word/header3.xml") != null) {
+      var addHeader = this._utf8ArrayToString(zip.file("word/header3.xml")._data.getContent());
+      var newHeader = addHeader.splice(addHeader.indexOf(`</w:pPr>`) + 8, 0, watermark);
+      zip.file("word/header3.xml", newHeader);
+    }
+
+    var body = `<w:p>
+        <w:r>
+        <w:t>{@</w:t>
+        </w:r>
+        <w:proofErr w:type="spellStart"/>
+        <w:r>
+        <w:t>body</w:t>
+        </w:r>
+        <w:proofErr w:type="spellEnd"/>
+        <w:r>
+        <w:t>}</w:t>
+        </w:r>
+        </w:p>`;
+
+    var newBody;
+
+    if (addBody.indexOf(`<w:sectPr>`) > -1) {
+      newBody = addBody.splice(addBody.indexOf(`<w:sectPr>`), 0, body);
+    } else {
+      newBody = addBody.splice(addBody.indexOf(`</w:body>`), 0, body);
+    }
+
+    var newBodyJson = JSON.parse(convert.xml2json(newBody, { compact: true, spaces: 0 }));
+    var newSchemasObject = Object.assign({}, this._schemas, newBodyJson["w:document"]["_attributes"]);
+    console.log("newSchemasObject", newSchemasObject);
+    newBodyJson["w:document"]["_attributes"] = newSchemasObject;
+
+    newBody = convert.json2xml(newBodyJson, { compact: true, spaces: 0 });
 
       zip.file("word/document.xml", newBody);
 
 		var doc = new Docxtemplater().loadZip(zip);
 
 
-		doc.setData({body: this._body.join(''), header: this._header.join(''), footer: this._footer.join('') });
+		doc.setData({body: this._body.join('') });
 		doc.render();
 		
       var out = doc.getZip().generate({
